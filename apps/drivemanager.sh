@@ -115,11 +115,11 @@ while true; do
         done
         ;;
       3)
-        confirm=$(dialog --yesno "Are you sure you want to format $choice?\nAll data will be lost!" 8 60)
+        dialog --yesno "Are you sure you want to format $choice?\nAll data will be lost!" 8 60
         if [ $? -eq 0 ]; then
           fstype=$(dialog --inputbox "Enter filesystem type (e.g. ext4, vfat):" 8 40 "ext4" 3>&1 1>&2 2>&3)
           [ -z "$fstype" ] && continue
-          sudo mkfs."$fstype" "$choice" 2>/tmp/format_err
+          sudo mkfs.$fstype "$choice" 2>/tmp/format_err
           if [ $? -eq 0 ]; then
             dialog --msgbox "$choice formatted as $fstype." 6 50
           else
@@ -134,6 +134,10 @@ while true; do
         dialog --textbox /tmp/drive_info.txt 20 60
         ;;
       5)
+        if [ -z "$mpath" ]; then
+          dialog --msgbox "Drive must be mounted to perform check." 6 50
+          continue
+        fi
         dialog --infobox "Checking drive $choice for errors..." 5 50
         sudo fsck -n "$choice" > /tmp/fsck_output 2>&1
         if grep -q "clean" /tmp/fsck_output; then
