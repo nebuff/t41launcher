@@ -115,10 +115,15 @@ while true; do
         done
         ;;
       3)
-        dialog --yesno "Are you sure you want to format $choice?\nAll data will be lost!" 8 60
+        fstype=$(dialog --menu "Select filesystem type:" 10 40 4 \
+          ext4 "Linux ext4" \
+          vfat "FAT32 (USB/Windows)" \
+          ntfs "Windows NTFS" \
+          exfat "exFAT (large USBs)" \
+          3>&1 1>&2 2>&3)
+        [ -z "$fstype" ] && continue
+        dialog --yesno "Are you sure you want to format $choice as $fstype?\nAll data will be lost!" 8 60
         if [ $? -eq 0 ]; then
-          fstype=$(dialog --inputbox "Enter filesystem type (e.g. ext4, vfat):" 8 40 "ext4" 3>&1 1>&2 2>&3)
-          [ -z "$fstype" ] && continue
           sudo mkfs.$fstype "$choice" 2>/tmp/format_err
           if [ $? -eq 0 ]; then
             dialog --msgbox "$choice formatted as $fstype." 6 50
