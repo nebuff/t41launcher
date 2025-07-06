@@ -9,7 +9,7 @@ A simple, customizable terminal-based app launcher designed for older hardware l
 Run this command in your terminal to install T41 Launcher:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nebuff/t41launcher/main/installer.sh | sh
+curl -fsSL https://raw.githubusercontent.com/nebuff/t41launcher/main/installer.sh | bash
 ```
 
 This will clone the repo to `~/t41launcher`, set permissions, and create a system-wide command `t41launcher` to launch it easily.
