@@ -9,7 +9,7 @@ A simple, customizable terminal-based app launcher designed for older hardware l
 Run this command in your terminal to install T41 Launcher:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nebuff/t41launcher/main/installer.sh | sh
+curl -fsSL https://raw.githubusercontent.com/nebuff/t41launcher/main/installer.sh | bash
 ```
 
 This will clone the repo to `~/t41launcher`, set permissions, and create a system-wide command `t41launcher` to launch it easily.
@@ -26,7 +26,56 @@ t41launcher
 
 ---
 
-## Adding an alias for shortcuts
+## Adding a permanent alias for shortcuts
+
+To create a permanent alias for the launcher, you can add it to your shell’s configuration file:
+
+### Bash
+
+Add this to your `~/.bashrc`:
+
+```bash
+alias t41='t41launcher'
+```
+
+Then reload your shell:
+
+```bash
+source ~/.bashrc
+```
+
+### Zsh
+
+Add this to your `~/.zshrc`:
+
+```bash
+alias t41='t41launcher'
+```
+
+Then reload your shell:
+
+```bash
+source ~/.zshrc
+```
+
+### Fish
+
+Add this to your `~/.config/fish/config.fish`:
+
+```fish
+alias t41 't41launcher'
+```
+
+Then reload your shell:
+
+```fish
+source ~/.config/fish/config.fish
+```
+
+Now you can run the launcher by simply typing `t41`.
+
+---
+
 
 If you want to run the launcher or specific apps with short commands, add aliases to your shell config.
 
@@ -92,6 +141,7 @@ Edit the `menu.json` file in the installation folder (`~/t41launcher/menu.json`)
 
 ## Requirements
 
+- curl
 - bash  
 - git  
 - jq  
