@@ -31,15 +31,16 @@ while true; do
   while true; do
     mpath=$(lsblk -ndo MOUNTPOINT "$choice")
     size=$(lsblk -ndo SIZE "$choice")
+    status="${mpath:-Unmounted}"
 
     options=(1 "Mount / Unmount")
-    if [ -n "$mpath" ]; then
-      options+=(2 "Browse")
-    fi
-    options+=(3 "Format Drive" 4 "Other Options" 5 "Back")
+    [ -n "$mpath" ] && options+=(2 "Browse")
+    options+=(3 "Format Drive" 4 "Other Options")
+    [ -z "$mpath" ] && options+=(5 "Drive Check (First Aid)")
+    options+=(6 "Back")
 
     action=$(dialog --backtitle "T41 Drive Manager" --title "Drive: $choice ($size)" \
-      --menu "Status: ${mpath:-Unmounted}\nSelect action:" 18 60 10 "${options[@]}" 3>&1 1>&2 2>&3)
+      --menu "Status: $status\nSelect action:" 20 60 10 "${options[@]}" 3>&1 1>&2 2>&3)
 
     case $action in
       1)
@@ -111,7 +112,22 @@ while true; do
         echo "$info" > /tmp/drive_info.txt
         dialog --textbox /tmp/drive_info.txt 20 60
         ;;
-      5) break ;;
+      5)
+        # First Aid (fsck)
+        dialog --infobox "Checking drive $choice for errors..." 5 50
+        sudo fsck -n "$choice" > /tmp/fsck_output 2>&1
+        if grep -q "clean" /tmp/fsck_output; then
+          dialog --msgbox "No errors found on $choice." 6 50
+        else
+          dialog --textbox /tmp/fsck_output 20 70
+          dialog --yesno "Errors detected.\nWould you like to attempt repairs?" 7 50
+          if [ $? -eq 0 ]; then
+            sudo fsck -y "$choice" | tee /tmp/fsck_repair
+            dialog --textbox /tmp/fsck_repair 20 70
+          fi
+        fi
+        ;;
+      6) break ;;
       *) break ;;
     esac
   done
