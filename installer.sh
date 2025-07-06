@@ -1,49 +1,87 @@
 #!/bin/bash
 
-# Base install directory
-INSTALL_DIR="$HOME/t41launcher"
-mkdir -p "$INSTALL_DIR"
+MENU_JSON="$HOME/t41launcher/menu.json"
+APPS_DIR="$HOME/t41launcher/apps"
+REPO_JSON="https://raw.githubusercontent.com/nebuff/t41launcher/refs/heads/main/apps/apps.json"
+mkdir -p "$APPS_DIR"
 
-# List of files to download (excluding app-store.sh)
-FILES=(
-  "launcher.sh"
-  "menu.json"
-  "config.sh"
-  "status_options.json"
-  "app-manager.sh"
-)
-
-echo "Installing T41 Launcher to $INSTALL_DIR..."
-
-for file in "${FILES[@]}"; do
-  url="https://raw.githubusercontent.com/nebuff/t41launcher/refs/heads/main/$file"
-  echo "Downloading $file..."
-  curl -fsSL "$url" -o "$INSTALL_DIR/$file"
-  if [ $? -ne 0 ]; then
-    echo "Failed to download $file from $url"
-    exit 1
+add_app() {
+  app_data=$(curl -fsSL "$REPO_JSON")
+  if [ -z "$app_data" ]; then
+    dialog --msgbox "Failed to retrieve app list." 6 40
+    return
   fi
-  chmod +x "$INSTALL_DIR/$file"
-done
 
-# Create apps folder
-mkdir -p "$INSTALL_DIR/apps"
+  # Extract app names and descriptions
+  mapfile -t app_names < <(echo "$app_data" | jq -r '.[].name')
+  mapfile -t descriptions < <(echo "$app_data" | jq -r '.[].description')
 
-# Add alias to shell configs (only if not already present)
-ALIASES=(
-  "alias t41='$INSTALL_DIR/launcher.sh'"
-  "alias t41config='$INSTALL_DIR/config.sh'"
-  "alias t41apps='$INSTALL_DIR/app-manager.sh'"
-  # Note: No alias for app-store.sh
-)
-
-for shellrc in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.config/fish/config.fish"; do
-  [ -f "$shellrc" ] || continue
-  for alias_cmd in "${ALIASES[@]}"; do
-    if ! grep -Fq "$alias_cmd" "$shellrc"; then
-      echo "$alias_cmd" >> "$shellrc"
-    fi
+  menu_items=()
+  for i in "${!app_names[@]}"; do
+    menu_items+=("${app_names[$i]}" "${descriptions[$i]}")
   done
+
+  selected_app=$(dialog --menu "Available Apps:" 20 60 15 "${menu_items[@]}" 3>&1 1>&2 2>&3)
+  [ $? -ne 0 ] && return
+
+  app_entry=$(echo "$app_data" | jq -c ".[] | select(.name == \"$selected_app\")")
+  app_url=$(echo "$app_entry" | jq -r '.file')
+  app_cmd=$(echo "$app_entry" | jq -r '.command')
+
+  # Download the app
+  filename=$(basename "$app_cmd")
+  curl -fsSL "$app_url" -o "$APPS_DIR/$filename"
+  chmod +x "$APPS_DIR/$filename"
+
+  # Check if app already in menu.json
+  if jq -e ".[] | select(.name == \"$selected_app\")" "$MENU_JSON" > /dev/null; then
+    dialog --msgbox "App already exists in menu.json." 6 40
+    return
+  fi
+
+  # Append entry
+  jq --argjson app "$app_entry" '. + [$app]' "$MENU_JSON" > /tmp/menu_tmp.json && mv /tmp/menu_tmp.json "$MENU_JSON"
+
+  dialog --msgbox "$selected_app installed and added to menu.json." 6 50
+}
+
+list_apps() {
+  mapfile -t apps < <(ls "$APPS_DIR")
+  dialog --msgbox "Installed Apps:\n\n${apps[*]}" 20 50
+}
+
+delete_app() {
+  mapfile -t apps < <(ls "$APPS_DIR")
+  [ ${#apps[@]} -eq 0 ] && dialog --msgbox "No apps installed." 6 40 && return
+
+  menu_items=()
+  for app in "${apps[@]}"; do
+    menu_items+=("$app" "Remove $app")
+  done
+
+  selected=$(dialog --menu "Remove which app?" 20 60 15 "${menu_items[@]}" 3>&1 1>&2 2>&3)
+  [ $? -ne 0 ] && return
+
+  rm -f "$APPS_DIR/$selected"
+  jq "map(select(.name != \"$selected\"))" "$MENU_JSON" > /tmp/menu_tmp.json && mv /tmp/menu_tmp.json "$MENU_JSON"
+  dialog --msgbox "$selected removed from system and menu." 6 40
+}
+
+while true; do
+  choice=$(dialog --backtitle "T41 Launcher App Manager" --title "App Manager" \
+    --menu "Select an option:" 15 50 6 \
+    1 "Add App from GitHub" \
+    2 "List Installed Apps" \
+    3 "Delete App" \
+    4 "Exit" \
+    3>&1 1>&2 2>&3)
+
+  case $choice in
+    1) add_app ;;
+    2) list_apps ;;
+    3) delete_app ;;
+    *) break ;;
+  esac
 done
 
-echo "Installation complete! Use 't41' to launch the launcher."
+clear
