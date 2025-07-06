@@ -4,14 +4,13 @@
 INSTALL_DIR="$HOME/t41launcher"
 mkdir -p "$INSTALL_DIR"
 
-# List of files to download
+# List of files to download (excluding app-store.sh)
 FILES=(
   "launcher.sh"
   "menu.json"
   "config.sh"
   "status_options.json"
   "app-manager.sh"
-  "app-store.sh"
 )
 
 echo "Installing T41 Launcher to $INSTALL_DIR..."
@@ -35,7 +34,7 @@ ALIASES=(
   "alias t41='$INSTALL_DIR/launcher.sh'"
   "alias t41config='$INSTALL_DIR/config.sh'"
   "alias t41apps='$INSTALL_DIR/app-manager.sh'"
-  "alias t41store='$INSTALL_DIR/app-store.sh'"
+  # Note: No alias for app-store.sh
 )
 
 for shellrc in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.config/fish/config.fish"; do
