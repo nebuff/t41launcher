@@ -1,1 +1,21 @@
-[]
+[
+  {
+    "name": "Terminal",
+    "command": "bash",
+    "description": "Open a new bash shell terminal",
+    "prompt_args": false,
+    "pause_after": false,
+    "sudo": false,
+    "confirm": false
+  },
+  {
+    "name": "Drive Manager",
+    "file": "https://raw.githubusercontent.com/nebuff/t41launcher/refs/heads/main/apps/drivemanager.sh"
+    "command": "bash ~/t41launcher/apps/drivemanager.sh",
+    "description": "Manage USB or Internal Drives",
+    "prompt_args": false,
+    "pause_after": false,
+    "sudo": false,
+    "confirm": false
+  }
+]
