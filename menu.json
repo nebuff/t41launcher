@@ -1,19 +1,37 @@
 [
   {
-    "name": "Settings",
-    "command": "bash config.sh",
-    "description": "Open the T41 Launcher settings panel",
-    "prompt_args": false,
-    "pause_after": true,
-    "sudo": false,
-    "confirm": false
-  },
-  {
     "name": "Terminal",
     "command": "bash",
     "description": "Open a new bash shell terminal",
     "prompt_args": false,
     "pause_after": false,
+    "sudo": false,
+    "confirm": false
+  },
+  {
+    "name": "Nano Editor",
+    "command": "nano",
+    "description": "Edit text files with Nano editor",
+    "prompt_args": true,
+    "pause_after": false,
+    "sudo": false,
+    "confirm": false
+  },
+  {
+    "name": "App Store",
+    "command": "bash app-store.sh",
+    "description": "Install/Delete Applications",
+    "prompt_args": false,
+    "pause_after": false,
+    "sudo": false,
+    "confirm": false
+  },
+  {
+    "name": "Settings",
+    "command": "bash config.sh",
+    "description": "Open the T41 Launcher settings",
+    "prompt_args": false,
+    "pause_after": true,
     "sudo": false,
     "confirm": false
   },
@@ -34,14 +52,5 @@
     "pause_after": false,
     "sudo": true,
     "confirm": true
-  },
-  {
-    "name": "Nano Editor",
-    "command": "nano",
-    "description": "Edit text files with Nano editor",
-    "prompt_args": true,
-    "pause_after": true,
-    "sudo": false,
-    "confirm": false
   }
 ]
