@@ -58,9 +58,7 @@ while true; do
 
     options=(1 "Mount / Unmount")
     [ -n "$mpath" ] && options+=(2 "Browse")
-    options+=(3 "Format Drive" 4 "Other Options")
-    [ -z "$mpath" ] && options+=(5 "Drive Check (First Aid)")
-    options+=(6 "Back")
+    options+=(3 "Format Drive" 4 "Other Options" 5 "Drive Check (First Aid)" 6 "Back")
 
     action=$(dialog --backtitle "T41 Drive Manager" --title "Drive: $choice ($size)" \
       --menu "Status: $status\nSelect action:" 20 60 10 "${options[@]}" 3>&1 1>&2 2>&3)
@@ -142,7 +140,7 @@ while true; do
           dialog --msgbox "No errors found on $choice." 6 50
         else
           dialog --textbox /tmp/fsck_output 20 70
-          dialog --yesno "Errors detected.\nWould you like to attempt repairs?" 7 50
+          dialog --yesno "Errors detected.\nAttempt repairs?" 7 50
           if [ $? -eq 0 ]; then
             sudo fsck -y "$choice" | tee /tmp/fsck_repair
             dialog --textbox /tmp/fsck_repair 20 70
