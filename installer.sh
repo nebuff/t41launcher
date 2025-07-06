@@ -8,16 +8,11 @@ BIN_LINK="/usr/local/bin/t41launcher"
 mkdir -p "$INSTALL_DIR"
 
 # List of files to fetch from the repo
-FILES=(
-  "launcher.sh"
-  "menu.json"
-  "status_options.json"
-  "config.sh"
-)
+FILES="launcher.sh menu.json status_options.json config.sh"
 
-# Download each file
+# Download each file and make executable
 echo "Downloading files..."
-for FILE in "${FILES[@]}"; do
+for FILE in $FILES; do
   curl -fsSL "$REPO_URL/$FILE" -o "$INSTALL_DIR/$FILE"
   chmod +x "$INSTALL_DIR/$FILE"
 done
