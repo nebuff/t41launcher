@@ -1,89 +1,128 @@
 #!/bin/bash
 
+MENU_JSON="menu.json"
 APPS_DIR="$HOME/t41launcher/apps"
-MENU_JSON="$HOME/t41launcher/menu.json"
-REPO_URL="https://raw.githubusercontent.com/nebuff/t41launcher/main/apps"
+GITHUB_API_URL="https://api.github.com/repos/nebuff/t41launcher/contents/apps"
+GITHUB_RAW_BASE="https://raw.githubusercontent.com/nebuff/t41launcher/refs/heads/main/apps"
 
 mkdir -p "$APPS_DIR"
 
+# Load current menu apps into an array for quick lookup
+load_installed_apps() {
+  INSTALLED_APPS=()
+  while IFS= read -r app; do
+    INSTALLED_APPS+=("$app")
+  done < <(jq -r '.[].name' "$MENU_JSON" 2>/dev/null || echo "")
+}
+
+# Save updated apps list to menu.json
+save_menu_json() {
+  local apps=("$@")
+  jq -n --argjson arr "$(printf '%s\n' "${apps[@]}" | jq -R . | jq -s .)" \
+    '[$arr[] | {name: ., description: ., command: ("./apps/" + .), prompt_args: false, pause_after: true, sudo: false, confirm: false}]' > "$MENU_JSON"
+}
+
+# Add app to menu.json and apps directory
+add_app() {
+  # Get available apps from GitHub API
+  local json apps_list=()
+  json=$(curl -fsSL "$GITHUB_API_URL") || { dialog --msgbox "Failed to fetch app list." 6 40; return; }
+  while IFS= read -r appname; do
+    # Skip if already installed
+    if [[ " ${INSTALLED_APPS[*]} " == *" $appname "* ]]; then continue; fi
+    apps_list+=("$appname" "$appname")
+  done < <(echo "$json" | jq -r '.[] | select(.name | endswith(".sh")) | .name')
+
+  if [ ${#apps_list[@]} -eq 0 ]; then
+    dialog --msgbox "No new apps available to add." 6 40
+    return
+  fi
+
+  local selected_app=$(dialog --menu "Select an app to add:" 20 50 10 "${apps_list[@]}" 3>&1 1>&2 2>&3)
+  [ $? -ne 0 ] && return
+
+  # Download selected app
+  curl -fsSL "$GITHUB_RAW_BASE/$selected_app" -o "$APPS_DIR/$selected_app" || {
+    dialog --msgbox "Failed to download $selected_app" 6 40
+    return
+  }
+  chmod +x "$APPS_DIR/$selected_app"
+
+  # Update menu.json
+  INSTALLED_APPS+=("$selected_app")
+  save_menu_json "${INSTALLED_APPS[@]}"
+
+  dialog --msgbox "$selected_app added and menu.json updated." 6 50
+}
+
+# List installed apps
+list_apps() {
+  local list=()
+  for app in "${INSTALLED_APPS[@]}"; do
+    list+=("$app" "$app")
+  done
+
+  if [ ${#list[@]} -eq 0 ]; then
+    dialog --msgbox "No apps installed." 6 40
+    return
+  fi
+
+  dialog --menu "Installed apps:" 20 50 10 "${list[@]}" 20 50 10
+}
+
+# Delete app
+delete_app() {
+  local list=()
+  for app in "${INSTALLED_APPS[@]}"; do
+    list+=("$app" "$app")
+  done
+
+  if [ ${#list[@]} -eq 0 ]; then
+    dialog --msgbox "No apps installed to delete." 6 40
+    return
+  fi
+
+  local selected_app=$(dialog --menu "Select app to delete:" 20 50 10 "${list[@]}" 3>&1 1>&2 2>&3)
+  [ $? -ne 0 ] && return
+
+  dialog --yesno "Are you sure you want to delete $selected_app?" 7 50
+  [ $? -ne 0 ] && return
+
+  rm -f "$APPS_DIR/$selected_app"
+
+  # Remove from installed apps array
+  local new_apps=()
+  for a in "${INSTALLED_APPS[@]}"; do
+    if [ "$a" != "$selected_app" ]; then
+      new_apps+=("$a")
+    fi
+  done
+  INSTALLED_APPS=("${new_apps[@]}")
+
+  # Update menu.json
+  save_menu_json "${INSTALLED_APPS[@]}"
+
+  dialog --msgbox "$selected_app deleted and menu.json updated." 6 50
+}
+
+# Main loop
 while true; do
-  choice=$(dialog --clear --backtitle "T41 App Manager" --title "Manage Applications" \
-    --menu "Select an option:" 15 50 6 \
-    1 "Add App from Repo" \
+  load_installed_apps
+
+  choice=$(dialog --menu "T41 App Manager" 15 50 4 \
+    1 "Add App" \
     2 "List Installed Apps" \
-    3 "Remove App" \
-    4 "Update App" \
-    5 "Exit" \
+    3 "Delete App" \
+    4 "Exit" \
     3>&1 1>&2 2>&3)
 
   [ $? -ne 0 ] && break
 
   case $choice in
-    1)
-      app_name=$(dialog --inputbox "Enter app name to add:" 8 40 "" 3>&1 1>&2 2>&3)
-      [ -z "$app_name" ] && continue
-
-      # Check if file exists in repo
-      if curl --silent --fail "$REPO_URL/$app_name.sh" > /dev/null; then
-        curl -s "$REPO_URL/$app_name.sh" -o "$APPS_DIR/$app_name.sh"
-        chmod +x "$APPS_DIR/$app_name.sh"
-
-        dialog --msgbox "$app_name installed." 6 40
-
-        # Add to menu.json if not exists
-        if ! jq -e ".[] | select(.name == \"$app_name\")" "$MENU_JSON" > /dev/null; then
-          jq ". += [{\"name\": \"$app_name\", \"command\": \"$APPS_DIR/$app_name.sh\"}]" "$MENU_JSON" > /tmp/menu.json && mv /tmp/menu.json "$MENU_JSON"
-        fi
-      else
-        dialog --msgbox "App not found in repo." 6 40
-      fi
-      ;;
-
-    2)
-      apps=$(ls "$APPS_DIR" 2>/dev/null)
-      echo "$apps" > /tmp/apps.txt
-      dialog --textbox /tmp/apps.txt 20 60
-      ;;
-
-    3)
-      mapfile -t app_files < <(ls "$APPS_DIR" 2>/dev/null | sed 's/\.sh$//')
-      [ ${#app_files[@]} -eq 0 ] && dialog --msgbox "No apps installed." 6 40 && continue
-
-      menu_items=()
-      for app in "${app_files[@]}"; do
-        menu_items+=("$app" "")
-      done
-
-      to_remove=$(dialog --menu "Select app to remove:" 20 50 10 "${menu_items[@]}" 3>&1 1>&2 2>&3)
-      [ -z "$to_remove" ] && continue
-
-      rm -f "$APPS_DIR/$to_remove.sh"
-      jq "del(.[] | select(.name == \"$to_remove\"))" "$MENU_JSON" > /tmp/menu.json && mv /tmp/menu.json "$MENU_JSON"
-      dialog --msgbox "$to_remove removed." 6 40
-      ;;
-
-    4)
-      mapfile -t app_files < <(ls "$APPS_DIR" 2>/dev/null | sed 's/\.sh$//')
-      [ ${#app_files[@]} -eq 0 ] && dialog --msgbox "No apps to update." 6 40 && continue
-
-      menu_items=()
-      for app in "${app_files[@]}"; do
-        menu_items+=("$app" "")
-      done
-
-      to_update=$(dialog --menu "Select app to update:" 20 50 10 "${menu_items[@]}" 3>&1 1>&2 2>&3)
-      [ -z "$to_update" ] && continue
-
-      if curl --silent --fail "$REPO_URL/$to_update.sh" > /dev/null; then
-        curl -s "$REPO_URL/$to_update.sh" -o "$APPS_DIR/$to_update.sh"
-        chmod +x "$APPS_DIR/$to_update.sh"
-        dialog --msgbox "$to_update updated." 6 40
-      else
-        dialog --msgbox "App not found in repo." 6 40
-      fi
-      ;;
-
-    5) break ;;
+    1) add_app ;;
+    2) list_apps ;;
+    3) delete_app ;;
+    4) break ;;
   esac
 done
 
