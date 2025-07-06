@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Settings",
+    "command": "bash config.sh",
+    "description": "Open the T41 Launcher settings panel",
+    "prompt_args": false,
+    "pause_after": true,
+    "sudo": false,
+    "confirm": false
+  },
+  {
+    "name": "Terminal",
+    "command": "bash",
+    "description": "Open a new bash shell terminal",
+    "prompt_args": false,
+    "pause_after": false,
+    "sudo": false,
+    "confirm": false
+  },
+  {
+    "name": "Shutdown",
+    "command": "poweroff",
+    "description": "Shut down the machine safely",
+    "prompt_args": false,
+    "pause_after": false,
+    "sudo": true,
+    "confirm": true
+  },
+  {
+    "name": "Reboot",
+    "command": "reboot",
+    "description": "Reboot the system",
+    "prompt_args": false,
+    "pause_after": false,
+    "sudo": true,
+    "confirm": true
+  },
+  {
+    "name": "Nano Editor",
+    "command": "nano",
+    "description": "Edit text files with Nano editor",
+    "prompt_args": true,
+    "pause_after": true,
+    "sudo": false,
+    "confirm": false
+  }
+]
