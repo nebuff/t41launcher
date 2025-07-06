@@ -3,8 +3,21 @@
 MOUNT_BASE="$HOME/mnt"
 mkdir -p "$MOUNT_BASE"
 
-# Get root device to prevent actions on it
-ROOT_DEV=$(findmnt / -o SOURCE -n)
+# Get root device and its parent disk
+ROOT_PART=$(findmnt / -o SOURCE -n)
+ROOT_DISK=$(lsblk -no PKNAME "$ROOT_PART" | sed 's|^|/dev/|')
+
+# Build blocklist
+PROTECTED_DEVICES=("$ROOT_PART")
+[ -n "$ROOT_DISK" ] && PROTECTED_DEVICES+=("$ROOT_DISK")
+
+is_protected() {
+  local dev="$1"
+  for protected in "${PROTECTED_DEVICES[@]}"; do
+    [ "$dev" = "$protected" ] && return 0
+  done
+  return 1
+}
 
 while true; do
   drives=()
@@ -15,7 +28,7 @@ while true; do
     size=$(lsblk -ndo SIZE "$dev")
     mp=$(lsblk -ndo MOUNTPOINT "$dev")
     label="$dev ($size)"
-    if [ "$dev" = "$ROOT_DEV" ]; then
+    if is_protected "$dev"; then
       label+=" [System - Protected]"
     elif [ -n "$mp" ]; then
       label+=" [Mounted at $mp]"
@@ -33,9 +46,8 @@ while true; do
   ret=$?
   [ $ret -ne 0 ] && break
 
-  # If it's the root device, block actions
-  if [ "$choice" = "$ROOT_DEV" ]; then
-    dialog --msgbox "This is the root system drive and is protected from all actions." 7 50
+  if is_protected "$choice"; then
+    dialog --msgbox "$choice is part of the root system and is protected from all actions." 7 50
     continue
   fi
 
