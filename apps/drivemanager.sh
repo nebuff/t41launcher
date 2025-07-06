@@ -3,6 +3,9 @@
 MOUNT_BASE="$HOME/mnt"
 mkdir -p "$MOUNT_BASE"
 
+# Get root device to prevent actions on it
+ROOT_DEV=$(findmnt / -o SOURCE -n)
+
 while true; do
   drives=()
   mapfile -t drives < <(lsblk -lnpo NAME,SIZE,TYPE,MOUNTPOINT | grep 'part' | awk '{print $1}')
@@ -12,7 +15,9 @@ while true; do
     size=$(lsblk -ndo SIZE "$dev")
     mp=$(lsblk -ndo MOUNTPOINT "$dev")
     label="$dev ($size)"
-    if [ -n "$mp" ]; then
+    if [ "$dev" = "$ROOT_DEV" ]; then
+      label+=" [System - Protected]"
+    elif [ -n "$mp" ]; then
       label+=" [Mounted at $mp]"
     else
       label+=" [Unmounted]"
@@ -27,6 +32,12 @@ while true; do
 
   ret=$?
   [ $ret -ne 0 ] && break
+
+  # If it's the root device, block actions
+  if [ "$choice" = "$ROOT_DEV" ]; then
+    dialog --msgbox "This is the root system drive and is protected from all actions." 7 50
+    continue
+  fi
 
   while true; do
     mpath=$(lsblk -ndo MOUNTPOINT "$choice")
@@ -45,7 +56,7 @@ while true; do
     case $action in
       1)
         if [ -z "$mpath" ]; then
-          default_mp="$MOUNT_BASE/$(basename $choice)"
+          default_mp="$MOUNT_BASE/$(basename "$choice")"
           mount_point=$(dialog --inputbox "Enter mount point directory:" 8 60 "$default_mp" 3>&1 1>&2 2>&3)
           [ -z "$mount_point" ] && continue
           mkdir -p "$mount_point"
@@ -113,7 +124,6 @@ while true; do
         dialog --textbox /tmp/drive_info.txt 20 60
         ;;
       5)
-        # First Aid (fsck)
         dialog --infobox "Checking drive $choice for errors..." 5 50
         sudo fsck -n "$choice" > /tmp/fsck_output 2>&1
         if grep -q "clean" /tmp/fsck_output; then
