@@ -19,7 +19,7 @@
   },
   {
     "name": "App Store",
-    "command": "bash app-store.sh",
+    "command": "bash app-manager.sh",
     "description": "Install/Delete Applications",
     "prompt_args": false,
     "pause_after": false,
