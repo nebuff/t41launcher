@@ -1,8 +1,9 @@
 [
   {
-    "name": "Terminal",
-    "command": "bash",
-    "description": "Open a new bash shell terminal",
+    "name": "Updater",
+    "file": "https://raw.githubusercontent.com/nebuff/t41launcher/refs/heads/main/apps/updater.sh"
+    "command": "bash ~/t41launcher/apps/updater.sh",
+    "description": "Update Apps and T41L!",
     "prompt_args": false,
     "pause_after": false,
     "sudo": false,
