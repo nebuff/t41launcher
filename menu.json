@@ -31,7 +31,7 @@
     "command": "bash config.sh",
     "description": "Open the T41 Launcher settings",
     "prompt_args": false,
-    "pause_after": true,
+    "pause_after": false,
     "sudo": false,
     "confirm": false
   },
