@@ -31,7 +31,7 @@ add_app() {
   curl -fsSL "$app_url" -o "$local_path"
   chmod +x "$local_path"
 
-  clean_entry=$(echo "$app_entry" | jq --arg path "$local_path" 'del(.file)')
+  new_entry=$(echo "$app_entry" | jq --arg cmd "bash $local_path" 'del(.file) | .command = $cmd')
 
   if jq -e ".[] | select(.name == \"$selected_app\")" "$MENU_JSON" > /dev/null; then
     dialog --msgbox "App already exists in menu.json." 6 40
@@ -39,7 +39,7 @@ add_app() {
   fi
 
   tmp_file=$(mktemp)
-  jq ". + [\$clean_entry]" "$MENU_JSON" --argjson clean_entry "$clean_entry" > "$tmp_file" && mv "$tmp_file" "$MENU_JSON"
+  jq ". += [\$new_entry]" "$MENU_JSON" --argjson new_entry "$new_entry" > "$tmp_file" && mv "$tmp_file" "$MENU_JSON"
 
   dialog --msgbox "$selected_app installed and added to launcher." 6 50
 }
