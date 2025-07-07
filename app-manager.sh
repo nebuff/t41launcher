@@ -38,7 +38,9 @@ add_app() {
     return
   fi
 
-  jq --argjson new "$fixed_entry" '. + [$new]' "$MENU_JSON" > /tmp/menu_tmp.json && mv /tmp/menu_tmp.json "$MENU_JSON"
+  # Append new app entry properly as JSON
+  tmp_file=$(mktemp)
+  jq ". + [$fixed_entry]" "$MENU_JSON" > "$tmp_file" && mv "$tmp_file" "$MENU_JSON"
 
   dialog --msgbox "$selected_app installed and added to menu." 6 50
 }
