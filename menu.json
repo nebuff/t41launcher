@@ -19,7 +19,7 @@
   },
   {
     "name": "App Store",
-    "command": "bash app-manager.sh",
+    "command": "bash ~/t41launcher/app-manager.sh",
     "description": "Install/Delete Applications",
     "prompt_args": false,
     "pause_after": false,
@@ -28,7 +28,7 @@
   },
   {
     "name": "Settings",
-    "command": "bash config.sh",
+    "command": "bash ~/t41launcher/config.sh",
     "description": "Open the T41 Launcher settings",
     "prompt_args": false,
     "pause_after": false,
