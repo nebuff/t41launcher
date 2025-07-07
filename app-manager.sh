@@ -23,7 +23,7 @@ add_app() {
   selected_app=$(dialog --menu "Available Apps:" 20 60 15 "${menu_items[@]}" 3>&1 1>&2 2>&3)
   [ $? -ne 0 ] && return
 
-  app_entry=$(echo "$app_data" | jq -c ".[] | select(.name == \"$selected_app\")")
+  app_entry=$(echo "$app_data" | jq -c --arg sel "$selected_app" '.[] | select(.name == $sel)')
   app_url=$(echo "$app_entry" | jq -r '.file')
   script_name=$(basename "$app_url")
   local_path="$APPS_DIR/$script_name"
@@ -41,7 +41,7 @@ add_app() {
   fi
 
   tmp_file=$(mktemp)
-  jq ". + [\$new_entry]" "$MENU_JSON" --argjson new_entry "$new_entry" > "$tmp_file" && mv "$tmp_file" "$MENU_JSON"
+  jq --argjson entry "$new_entry" '. + [ $entry ]' "$MENU_JSON" > "$tmp_file" && mv "$tmp_file" "$MENU_JSON"
 
   dialog --msgbox "$selected_app installed and added to launcher." 6 50
 }
