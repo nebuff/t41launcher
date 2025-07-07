@@ -12,7 +12,6 @@ add_app() {
     return
   fi
 
-  # Extract app names and descriptions
   mapfile -t app_names < <(echo "$app_data" | jq -r '.[].name')
   mapfile -t descriptions < <(echo "$app_data" | jq -r '.[].description')
 
@@ -24,25 +23,27 @@ add_app() {
   selected_app=$(dialog --menu "Available Apps:" 20 60 15 "${menu_items[@]}" 3>&1 1>&2 2>&3)
   [ $? -ne 0 ] && return
 
-  app_entry=$(echo "$app_data" | jq -c ".[] | select(.name == \"$selected_app\")")
+  app_entry=$(echo "$app_data" | jq ".[] | select(.name == \"$selected_app\")")
   app_url=$(echo "$app_entry" | jq -r '.file')
   app_cmd=$(echo "$app_entry" | jq -r '.command')
 
-  # Download the app
+  # Download script
   filename=$(basename "$app_cmd")
   curl -fsSL "$app_url" -o "$APPS_DIR/$filename"
   chmod +x "$APPS_DIR/$filename"
 
-  # Check if app already in menu.json
+  # Build menu.json app entry (exclude .file)
+  menu_entry=$(echo "$app_entry" | jq 'del(.file)')
+
+  # Check if app already exists
   if jq -e ".[] | select(.name == \"$selected_app\")" "$MENU_JSON" > /dev/null; then
     dialog --msgbox "App already exists in menu.json." 6 40
     return
   fi
 
-  # Append entry
-  jq --argjson app "$app_entry" '. + [$app]' "$MENU_JSON" > /tmp/menu_tmp.json && mv /tmp/menu_tmp.json "$MENU_JSON"
+  jq --argjson new "$menu_entry" '. + [$new]' "$MENU_JSON" > /tmp/menu_tmp.json && mv /tmp/menu_tmp.json "$MENU_JSON"
 
-  dialog --msgbox "$selected_app installed and added to menu.json." 6 50
+  dialog --msgbox "$selected_app installed and added to menu." 6 50
 }
 
 list_apps() {
