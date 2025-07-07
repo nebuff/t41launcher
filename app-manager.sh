@@ -23,7 +23,7 @@ add_app() {
   selected_app=$(dialog --menu "Available Apps:" 20 60 15 "${menu_items[@]}" 3>&1 1>&2 2>&3)
   [ $? -ne 0 ] && return
 
-  app_entry=$(echo "$app_data" | jq ".[] | select(.name == \"$selected_app\")")
+  app_entry=$(echo "$app_data" | jq -c ".[] | select(.name == \"$selected_app\")")
   app_url=$(echo "$app_entry" | jq -r '.file')
   script_name=$(basename "$app_url")
   local_path="$APPS_DIR/$script_name"
@@ -31,15 +31,17 @@ add_app() {
   curl -fsSL "$app_url" -o "$local_path"
   chmod +x "$local_path"
 
+  # Construct new menu entry
   new_entry=$(echo "$app_entry" | jq --arg cmd "bash $local_path" 'del(.file) | .command = $cmd')
 
+  # Check if the app already exists in menu.json
   if jq -e ".[] | select(.name == \"$selected_app\")" "$MENU_JSON" > /dev/null; then
     dialog --msgbox "App already exists in menu.json." 6 40
     return
   fi
 
   tmp_file=$(mktemp)
-  jq ". += [\$new_entry]" "$MENU_JSON" --argjson new_entry "$new_entry" > "$tmp_file" && mv "$tmp_file" "$MENU_JSON"
+  jq ". + [\$new_entry]" "$MENU_JSON" --argjson new_entry "$new_entry" > "$tmp_file" && mv "$tmp_file" "$MENU_JSON"
 
   dialog --msgbox "$selected_app installed and added to launcher." 6 50
 }
