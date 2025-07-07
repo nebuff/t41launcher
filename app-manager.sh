@@ -2,31 +2,36 @@
 
 MENU_JSON="$HOME/t41launcher/menu.json"
 APPS_DIR="$HOME/t41launcher/apps"
-REPO_BASE="https://raw.githubusercontent.com/nebuff/t41launcher/refs/heads/main/apps"
+REPO_JSON="https://raw.githubusercontent.com/nebuff/t41launcher/refs/heads/main/apps/apps.json"
 mkdir -p "$APPS_DIR"
 
 add_app() {
-  # Get app list from GitHub directory
-  app_list=$(curl -s https://github.com/nebuff/t41launcher/tree/main/apps | grep -oP '>([^<]+?\.sh)<' | sed 's/[><]//g')
-  mapfile -t apps <<< "$app_list"
-
-  if [ ${#apps[@]} -eq 0 ]; then
-    dialog --msgbox "No apps available." 6 40
+  app_data=$(curl -fsSL "$REPO_JSON")
+  if [ -z "$app_data" ]; then
+    dialog --msgbox "Failed to retrieve app list." 6 40
     return
   fi
 
+  # Extract app names and descriptions
+  mapfile -t app_names < <(echo "$app_data" | jq -r '.[].name')
+  mapfile -t descriptions < <(echo "$app_data" | jq -r '.[].description')
+
   menu_items=()
-  for app in "${apps[@]}"; do
-    appname=$(basename "$app")
-    menu_items+=("$appname" "Install $appname")
+  for i in "${!app_names[@]}"; do
+    menu_items+=("${app_names[$i]}" "${descriptions[$i]}")
   done
 
   selected_app=$(dialog --menu "Available Apps:" 20 60 15 "${menu_items[@]}" 3>&1 1>&2 2>&3)
   [ $? -ne 0 ] && return
 
-  # Download the selected app
-  curl -fsSL "$REPO_BASE/$selected_app" -o "$APPS_DIR/$selected_app"
-  chmod +x "$APPS_DIR/$selected_app"
+  app_entry=$(echo "$app_data" | jq -c ".[] | select(.name == \"$selected_app\")")
+  app_url=$(echo "$app_entry" | jq -r '.file')
+  app_cmd=$(echo "$app_entry" | jq -r '.command')
+
+  # Download the app
+  filename=$(basename "$app_cmd")
+  curl -fsSL "$app_url" -o "$APPS_DIR/$filename"
+  chmod +x "$APPS_DIR/$filename"
 
   # Check if app already in menu.json
   if jq -e ".[] | select(.name == \"$selected_app\")" "$MENU_JSON" > /dev/null; then
@@ -34,16 +39,8 @@ add_app() {
     return
   fi
 
-  # Append to menu.json
-  jq ". + [{
-    \"name\": \"$selected_app\",
-    \"description\": \"$selected_app\",
-    \"command\": \"./apps/$selected_app\",
-    \"prompt_args\": false,
-    \"pause_after\": true,
-    \"sudo\": false,
-    \"confirm\": false
-  }]" "$MENU_JSON" > /tmp/menu_tmp.json && mv /tmp/menu_tmp.json "$MENU_JSON"
+  # Append entry
+  jq --argjson app "$app_entry" '. + [$app]' "$MENU_JSON" > /tmp/menu_tmp.json && mv /tmp/menu_tmp.json "$MENU_JSON"
 
   dialog --msgbox "$selected_app installed and added to menu.json." 6 50
 }
@@ -66,7 +63,6 @@ delete_app() {
   [ $? -ne 0 ] && return
 
   rm -f "$APPS_DIR/$selected"
-  # Remove from menu.json
   jq "map(select(.name != \"$selected\"))" "$MENU_JSON" > /tmp/menu_tmp.json && mv /tmp/menu_tmp.json "$MENU_JSON"
   dialog --msgbox "$selected removed from system and menu." 6 40
 }
