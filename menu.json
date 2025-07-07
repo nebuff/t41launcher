@@ -19,7 +19,7 @@
   },
   {
     "name": "App Store",
-    "command": "bash ~/t41launcher/apps/app-manager.sh",
+    "command": "bash ~/t41launcher/app-manager.sh",
     "description": "Install/Delete Applications",
     "prompt_args": false,
     "pause_after": false,
